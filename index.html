@@ -8,6 +8,17 @@ const fmt=(h,m)=>h+m,week='日一二三四五六',dateStr=d=>{const t=new Date(d
 function makeTime(id,end){const x=$(id);for(let i=0;i<=(end?24:23);i++){const v=String(i).padStart(2,'0');const o=el('option',v);o.value=v;x.append(o)}}
 function makeMin(id){const x=$(id);for(let i=0;i<60;i++){const v=String(i).padStart(2,'0');const o=el('option',v);o.value=v;x.append(o)}}
 for(const prefix of ['ammo','guard']){makeTime(prefix+'SH',false);makeTime(prefix+'EH',true);makeMin(prefix+'SM');makeMin(prefix+'EM');$(prefix+'SH').value='08';$(prefix+'EH').value='10';$(prefix+'SM').value='00';$(prefix+'EM').value='00';$(prefix+'Date').value=today()}
+// 開始時間異動時，自動帶入兩小時後的結束時間（跨午夜以 24:00 表示）。
+function autoDutyEnd(prefix){
+ const hour=Number($(prefix+'SH').value),minute=Number($(prefix+'SM').value);
+ const endTotal=(hour*60+minute+120)%(24*60);
+ const endHour=hour*60+minute+120===1440?24:Math.floor(endTotal/60);
+ $(prefix+'EH').value=String(endHour).padStart(2,'0');
+ $(prefix+'EM').value=String(endHour===24?0:endTotal%60).padStart(2,'0');
+}
+for(const prefix of ['ammo','guard']){
+ for(const part of ['SH','SM'])$(prefix+part).addEventListener('change',()=>autoDutyEnd(prefix));
+}
 function isHoliday(){const mode=$('ammoMode').value,d=$('ammoDate').value;return mode==='holiday'||(mode==='auto'&&[0,6].includes(new Date(d+'T12:00:00').getDay()))}
 function fillDutyPeople(kind){const select=$(kind+'Person'),old=select.value,d=$(kind+'Date').value,all=db.people.filter(p=>activeOn(p,d)&&!p.archived),allowed=all.filter(p=>kind==='guard'?p.rank!=='義務役':isHoliday()||p.rank==='義務役');select.replaceChildren();const placeholder=el('option','請選擇人員');placeholder.value='';select.append(placeholder);for(const p of allowed){const o=el('option',p.grade+' '+p.name+'（'+p.rank+'）');o.value=p.id;select.append(o)}if(allowed.some(p=>p.id===old))select.value=old;else select.value='';if(kind==='ammo')$('ammoRule').textContent=isHoliday()?'假日模式：所有身分皆可選':'平日模式：僅顯示義務役'}
 function displayPerson(id){return db.people.find(p=>p.id===id)}
